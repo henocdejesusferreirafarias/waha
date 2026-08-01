@@ -39,19 +39,47 @@
 Run:
 
 ```powershell
-corepack yarn install --immutable
-node -e "console.log(require('@wppconnect-team/wppconnect/package.json').version, require('@wppconnect/wa-js/package.json').version)"
+$env:YARN_CHECKSUM_BEHAVIOR = 'ignore'
+try { corepack yarn install --immutable } finally { Remove-Item Env:YARN_CHECKSUM_BEHAVIOR }
+node -e "const fs=require('fs'),path=require('path'); for(const name of ['@wppconnect-team/wppconnect','@wppconnect/wa-js']){let dir=path.dirname(require.resolve(name)); while(!fs.existsSync(path.join(dir,'package.json'))){dir=path.dirname(dir)}; console.log(JSON.parse(fs.readFileSync(path.join(dir,'package.json'),'utf8')).version)}"
 ```
 
-Expected: installation succeeds and the version line is `2.2.3 4.4.1`.
+Expected: the legacy Git archive installs without changing `yarn.lock`, and the
+two version lines are `2.2.3` and `4.4.1`. The checksum override is limited to
+this red-state setup because GitHub's regenerated WA-JS archive no longer
+matches the checksum stored by WAHA 2026.7.2.
 
 - [ ] **Step 2: Write the focused compatibility test**
 
 Create `src/core/engines/wpp/dependencies.test.ts` with:
 
 ```typescript
-import wppconnectPackage = require('@wppconnect-team/wppconnect/package.json');
-import waJsPackage = require('@wppconnect/wa-js/package.json');
+import fs from 'node:fs';
+import path from 'node:path';
+
+interface PackageMetadata {
+  name: string;
+  version: string;
+}
+
+function loadPackageMetadata(packageName: string): PackageMetadata {
+  let directory = path.dirname(require.resolve(packageName));
+
+  while (directory !== path.dirname(directory)) {
+    const manifestPath = path.join(directory, 'package.json');
+    if (fs.existsSync(manifestPath)) {
+      const metadata = JSON.parse(
+        fs.readFileSync(manifestPath, 'utf8'),
+      ) as PackageMetadata;
+      if (metadata.name === packageName) {
+        return metadata;
+      }
+    }
+    directory = path.dirname(directory);
+  }
+
+  throw new Error(`Package metadata not found for ${packageName}`);
+}
 
 function isVersionAtLeast(actual: string, minimum: string): boolean {
   const actualParts = actual.split('.').map(Number);
@@ -71,10 +99,14 @@ function isVersionAtLeast(actual: string, minimum: string): boolean {
 
 describe('WPP dependency compatibility', () => {
   it('uses a WPPConnect release containing the MsgStore compatibility fix', () => {
+    const wppconnectPackage = loadPackageMetadata(
+      '@wppconnect-team/wppconnect',
+    );
     expect(isVersionAtLeast(wppconnectPackage.version, '2.2.5')).toBe(true);
   });
 
   it('uses a WA-JS release containing the MsgStore compatibility fix', () => {
+    const waJsPackage = loadPackageMetadata('@wppconnect/wa-js');
     expect(isVersionAtLeast(waJsPackage.version, '4.4.3')).toBe(true);
   });
 });
@@ -123,12 +155,14 @@ Run:
 
 ```powershell
 corepack yarn install --immutable
-node -e "console.log(require('@wppconnect-team/wppconnect/package.json').version, require('@wppconnect/wa-js/package.json').version)"
+node -e "const fs=require('fs'),path=require('path'); for(const name of ['@wppconnect-team/wppconnect','@wppconnect/wa-js']){let dir=path.dirname(require.resolve(name)); while(!fs.existsSync(path.join(dir,'package.json'))){dir=path.dirname(dir)}; console.log(JSON.parse(fs.readFileSync(path.join(dir,'package.json'),'utf8')).version)}"
 rg -n 'wppconnect-team/wppconnect@(npm:)?2\.2\.6|wppconnect/wa-js@(npm:)?4\.5\.0|github:wppconnect-team/(wppconnect|wa-js)' package.json yarn.lock
 git diff --check
 ```
 
-Expected: immutable install succeeds, the version line is `2.2.6 4.5.0`, exact npm selectors are present, no root Git branch selectors remain, and `git diff --check` is silent.
+Expected: immutable install succeeds, the two version lines are `2.2.6` and
+`4.5.0`, exact npm selectors are present, no root Git branch selectors remain,
+and `git diff --check` is silent.
 
 - [ ] **Step 7: Commit the green regression fix**
 
@@ -164,7 +198,11 @@ corepack yarn lint
 corepack yarn build
 ```
 
-Expected: every command exits with code 0 and produces no test failures, lint warnings, or TypeScript build errors.
+Expected: immutable install, lint, and TypeScript build exit with code 0. The
+unit command must keep all 15 baseline-green suites passing and introduce no
+new failure; the two pre-existing Chatwoot suites may continue to fail while
+Jest CommonJS loads the Baileys ESM entrypoint. Record that baseline limitation
+separately instead of attributing it to this WPP change.
 
 - [ ] **Step 2: Confirm the diff remains dependency-only plus its regression documentation**
 
