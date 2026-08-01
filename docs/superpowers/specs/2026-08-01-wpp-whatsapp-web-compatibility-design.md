@@ -73,9 +73,10 @@ Run the following layers in order:
 4. Lint.
 5. TypeScript/Nest build.
 6. Linux/AMD64 Docker build from the repository Dockerfile with Chromium and
-   `WHATSAPP_DEFAULT_ENGINE=WPP`.
+   no build-time default engine.
 7. Inspect the built image to confirm the resolved WPPConnect and WA-JS
-   versions and the WPP default engine.
+   versions and that `WHATSAPP_DEFAULT_ENGINE` remains unset for runtime
+   configuration by EasyPanel.
 
 The local checks prove dependency selection, compilation, tests, and Docker
 packaging. They cannot prove a live WhatsApp send or webhook delivery without
@@ -98,9 +99,10 @@ is needed.
 - The regression test fails on the original dependency set and passes on the
   corrected set.
 - Unit tests, lint, and application build complete successfully.
-- A Linux/AMD64 WPP Docker image builds successfully from the unchanged
-  EasyPanel entrypoint, the repository Dockerfile.
-- Image inspection reports WPPConnect 2.2.6, WA-JS 4.5.0, and WPP as the
-  default engine.
+- A Linux/AMD64 WAHA Docker image containing the corrected WPP dependencies
+  builds successfully from the unchanged EasyPanel entrypoint, the repository
+  Dockerfile.
+- Image inspection reports WPPConnect 2.2.6 and WA-JS 4.5.0, while
+  `WHATSAPP_DEFAULT_ENGINE` remains unset for EasyPanel to define at runtime.
 - No WAHA endpoint, response DTO, webhook event name, or payload shape changes.
 - No production container is modified by this work.

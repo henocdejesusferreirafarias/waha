@@ -15,7 +15,7 @@
 - Pin `@wppconnect/wa-js` exactly to `4.5.0`.
 - Enforce minimum safe versions WPPConnect `2.2.5` and WA-JS `4.4.3` in the regression test.
 - Do not change n8n, production containers, EasyPanel services, or publish to GHCR.
-- Build the existing repository `Dockerfile` for Linux/AMD64 with Chromium and `WHATSAPP_DEFAULT_ENGINE=WPP`.
+- Build the existing repository `Dockerfile` for Linux/AMD64 with Chromium and no build-time default engine; EasyPanel defines `WHATSAPP_DEFAULT_ENGINE` at runtime.
 - Commit subjects for this Core-only change must start with `[core]`.
 - Push a branch and open a pull request against `core`; do not merge without separate explicit approval.
 
@@ -185,7 +185,7 @@ Expected: one commit containing only the two dependency pins, lockfile update, a
 **Interfaces:**
 
 - Consumes: the exact dependency set and passing focused test from Task 1.
-- Produces: local evidence for immutable installation, all unit tests, lint, NestJS build, Linux/AMD64 Docker packaging, installed image versions, and WPP default-engine configuration.
+- Produces: local evidence for immutable installation, all unit tests, lint, NestJS build, Linux/AMD64 Docker packaging, installed image versions, and an engine-neutral image configuration.
 
 - [ ] **Step 1: Run the complete source validation set**
 
@@ -222,7 +222,7 @@ Expected: tracked changes are limited to the approved design/plan documents, `pa
 Run:
 
 ```powershell
-docker build --platform linux/amd64 --build-arg USE_BROWSER=chromium --build-arg WHATSAPP_DEFAULT_ENGINE=WPP --tag waha-wpp-hotfix:local .
+docker build --platform linux/amd64 --build-arg USE_BROWSER=chromium --tag waha-wpp-hotfix:local .
 ```
 
 Expected: Docker completes the repository `Dockerfile` and creates `waha-wpp-hotfix:local` with exit code 0.
@@ -233,11 +233,13 @@ Run:
 
 ```powershell
 docker run --rm --entrypoint node waha-wpp-hotfix:local -e "console.log(require('/app/node_modules/@wppconnect-team/wppconnect/package.json').version, require('/app/node_modules/@wppconnect/wa-js/package.json').version)"
-docker inspect waha-wpp-hotfix:local --format '{{range .Config.Env}}{{println .}}{{end}}' | Select-String '^WHATSAPP_DEFAULT_ENGINE=WPP$'
+docker inspect waha-wpp-hotfix:local --format '{{range .Config.Env}}{{println .}}{{end}}' | Select-String '^WHATSAPP_DEFAULT_ENGINE=$'
 docker image inspect waha-wpp-hotfix:local --format '{{.Architecture}}/{{.Os}}'
 ```
 
-Expected: image output reports `2.2.6 4.5.0`, `WHATSAPP_DEFAULT_ENGINE=WPP`, and `amd64/linux`.
+Expected: image output reports `2.2.6 4.5.0`, an empty
+`WHATSAPP_DEFAULT_ENGINE=`, and `amd64/linux`. EasyPanel supplies the desired
+engine through its runtime environment variables.
 
 - [ ] **Step 5: Record final verification state without claiming live WhatsApp acceptance**
 
@@ -291,8 +293,9 @@ WAHA 2026.7.2 resolved WPPConnect 2.2.3 and WA-JS 4.4.1. WhatsApp Web 2.3000.104
 - complete unit suite
 - lint
 - NestJS build
-- Linux/AMD64 Chromium Docker build with WPP default engine
+- Linux/AMD64 Chromium Docker build with no build-time engine default
 - image inspection confirmed WPPConnect 2.2.6 and WA-JS 4.5.0
+- image inspection confirmed EasyPanel remains responsible for the runtime engine variable
 
 ## Deployment boundary
 No production service was changed. Live send, ACK, and webhook delivery remain post-deployment acceptance checks in EasyPanel.
