@@ -54,8 +54,8 @@ matches the checksum stored by WAHA 2026.7.2.
 Create `src/core/engines/wpp/dependencies.test.ts` with:
 
 ```typescript
-import fs from 'node:fs';
-import path from 'node:path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 interface PackageMetadata {
   name: string;
@@ -117,7 +117,7 @@ describe('WPP dependency compatibility', () => {
 Run:
 
 ```powershell
-corepack yarn test:unit src/core/engines/wpp/dependencies.test.ts --runInBand
+corepack yarn jest --selectProjects unit --runTestsByPath src/core/engines/wpp/dependencies.test.ts --runInBand
 ```
 
 Expected: both tests fail with `Expected: true` and `Received: false`, proving the locked 2.2.3/4.4.1 packages violate the compatibility floors.
@@ -144,7 +144,7 @@ Expected: `package.json` and the root workspace section of `yarn.lock` contain e
 Run:
 
 ```powershell
-corepack yarn test:unit src/core/engines/wpp/dependencies.test.ts --runInBand
+corepack yarn jest --selectProjects unit --runTestsByPath src/core/engines/wpp/dependencies.test.ts --runInBand
 ```
 
 Expected: both compatibility tests pass.
