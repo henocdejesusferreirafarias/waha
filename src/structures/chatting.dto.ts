@@ -10,11 +10,14 @@ import { plainToInstance, Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
+  IsIn,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
   IsUrl,
+  MaxLength,
+  MinLength,
   ValidateNested,
 } from 'class-validator';
 
@@ -85,6 +88,33 @@ export class ChatRequest extends SessionBaseRequest {
   @ChatIdProperty()
   @IsString()
   chatId: string;
+}
+
+export const PIX_KEY_TYPES = ['CPF', 'CNPJ', 'PHONE', 'EMAIL', 'EVP'] as const;
+export type PixKeyType = (typeof PIX_KEY_TYPES)[number];
+
+export class SendPixRequest extends ChatRequest {
+  @ApiProperty({ enum: PIX_KEY_TYPES, example: 'PHONE' })
+  @IsIn(PIX_KEY_TYPES)
+  keyType: PixKeyType;
+
+  @ApiProperty({ example: 'Marcelo Barbershop' })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(120)
+  name: string;
+
+  @ApiProperty({ example: '+5598999999999' })
+  @IsString()
+  @MinLength(3)
+  @MaxLength(160)
+  key: string;
+
+  @ApiProperty({ required: false, maxLength: 500 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  instructions?: string;
 }
 
 export class SendSeenRequest extends ChatRequest {
