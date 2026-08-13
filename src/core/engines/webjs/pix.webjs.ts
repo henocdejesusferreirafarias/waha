@@ -9,11 +9,10 @@ import type {
   SendPixRequest,
 } from '@waha/structures/chatting.dto';
 import { generatePrefixedId } from '@waha/utils/ids';
+import type { Page } from 'puppeteer';
 
 interface PixWebjsClient<TResult> {
-  pupPage: {
-    evaluate(pageFunction: () => number[]): Promise<number[]>;
-  };
+  pupPage: Pick<Page, 'evaluate'>;
   sendMessage(
     chatId: string,
     content: string,
@@ -31,6 +30,72 @@ export interface PixInteractiveMessage {
     messageVersion: 1;
   };
   messageSecret: Uint8Array;
+}
+
+export function installPixMessageSecretRehydratorInPage(): void {
+  interface PageSendOptions {
+    extraOptions?: Record<string, unknown>;
+  }
+  interface PageWWebJS {
+    __wahaPixMessageSecretRehydrator?: boolean;
+    sendMessage(
+      chat: unknown,
+      content: unknown,
+      options?: PageSendOptions,
+    ): Promise<unknown>;
+  }
+
+  const pageWindow = window as unknown as { WWebJS: PageWWebJS };
+  const wwebjs = pageWindow.WWebJS;
+  if (wwebjs.__wahaPixMessageSecretRehydrator) return;
+
+  const originalSendMessage = wwebjs.sendMessage;
+  wwebjs.sendMessage = async (chat, content, options = {}) => {
+    const extra = options.extraOptions;
+    const secret = extra?.messageSecret;
+    if (
+      extra?.nativeFlowName === 'payment_info' &&
+      secret &&
+      !(secret instanceof Uint8Array)
+    ) {
+      const bytes = Object.values(secret);
+      if (
+        bytes.length !== 32 ||
+        !bytes.every(
+          (byte) => Number.isInteger(byte) && Number(byte) >= 0 && Number(byte) <= 255,
+        )
+      ) {
+        throw new Error('Invalid PIX message secret');
+      }
+      extra.messageSecret = Uint8Array.from(bytes.map(Number));
+    }
+    return originalSendMessage(chat, content, options);
+  };
+  wwebjs.__wahaPixMessageSecretRehydrator = true;
+}
+
+export async function ensurePixChatInPage(chatId: string): Promise<string> {
+  let wid = window.require('WAWebWidFactory').createWid(chatId);
+  if (chatId.endsWith('@c.us')) {
+    const exists = await window
+      .require('WAWebQueryExistsJob')
+      .queryWidExists(wid);
+    if (!exists?.wid) {
+      throw new Error('PIX destination is not registered in WhatsApp');
+    }
+    wid = exists.wid;
+  }
+  const result = await window
+    .require('WAWebFindChatAction')
+    .findOrCreateLatestChat(wid, 'createChat');
+  if (!result?.chat?.id) {
+    throw new Error('Failed to materialize PIX chat');
+  }
+  const chat = window.require('WAWebCollections').Chat.get(result.chat.id);
+  if (!chat) {
+    throw new Error('Materialized PIX chat is missing from the chat store');
+  }
+  return chat.id.toString();
 }
 
 export function assertPixDirectChatId(chatId: string): string {
@@ -158,13 +223,22 @@ export async function sendPixWebjs<TResult>(
   if (!request.name.trim() || !validatePixKey(request.keyType, request.key)) {
     throw new UnprocessableEntityException('Invalid PIX key for keyType');
   }
+  let phase = 'prepare_chat';
   try {
+    const canonicalChatId = await client.pupPage.evaluate(
+      ensurePixChatInPage,
+      chatId,
+    );
+    phase = 'install_secret_rehydrator';
+    await client.pupPage.evaluate(installPixMessageSecretRehydratorInPage);
+    phase = 'generate_secret';
     const bytes = await client.pupPage.evaluate(() =>
       Array.from(self.crypto.getRandomValues(new Uint8Array(32))),
     );
     const extra = buildPixExtra(request, Uint8Array.from(bytes));
-    return await client.sendMessage(chatId, '', { extra: extra });
+    phase = 'dispatch';
+    return await client.sendMessage(canonicalChatId, '', { extra: extra });
   } catch {
-    throw new InternalServerErrorException('Failed to send PIX');
+    throw new InternalServerErrorException(`Failed to send PIX (${phase})`);
   }
 }
