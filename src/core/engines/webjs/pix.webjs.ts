@@ -1,4 +1,7 @@
-import { UnprocessableEntityException } from '@nestjs/common';
+import {
+  InternalServerErrorException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { ensureSuffix } from '@waha/core/abc/session.abc';
 import { isJidCus, isLidUser } from '@waha/core/utils/jids';
 import type {
@@ -155,9 +158,13 @@ export async function sendPixWebjs<TResult>(
   if (!request.name.trim() || !validatePixKey(request.keyType, request.key)) {
     throw new UnprocessableEntityException('Invalid PIX key for keyType');
   }
-  const bytes = await client.pupPage.evaluate(() =>
-    Array.from(self.crypto.getRandomValues(new Uint8Array(32))),
-  );
-  const extra = buildPixExtra(request, Uint8Array.from(bytes));
-  return client.sendMessage(chatId, '', { extra: extra });
+  try {
+    const bytes = await client.pupPage.evaluate(() =>
+      Array.from(self.crypto.getRandomValues(new Uint8Array(32))),
+    );
+    const extra = buildPixExtra(request, Uint8Array.from(bytes));
+    return await client.sendMessage(chatId, '', { extra: extra });
+  } catch {
+    throw new InternalServerErrorException('Failed to send PIX');
+  }
 }

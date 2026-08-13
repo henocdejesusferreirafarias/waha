@@ -140,4 +140,54 @@ describe('WEBJS PIX', () => {
     expect(evaluate).not.toHaveBeenCalled();
     expect(sendMessage).not.toHaveBeenCalled();
   });
+
+  it('does not expose PIX data in validation errors', async () => {
+    let error: unknown;
+    try {
+      await sendPixWebjs(
+        {
+          pupPage: { evaluate: jest.fn() },
+          sendMessage: jest.fn(),
+        },
+        {
+          session: 'default',
+          chatId: 'group@g.us',
+          keyType: 'PHONE',
+          name: 'Marcelo Privado',
+          key: '+5511999999999',
+        },
+      );
+    } catch (caught) {
+      error = caught;
+    }
+
+    expect(String(error)).not.toMatch(/\+5511999999999|Marcelo Privado/);
+  });
+
+  it('sanitizes unexpected browser or send errors', async () => {
+    const sendMessage = jest.fn(async () => {
+      throw new Error('provider leaked +5511999999999 Marcelo Privado');
+    });
+    let error: unknown;
+    try {
+      await sendPixWebjs(
+        {
+          pupPage: { evaluate: jest.fn(async () => new Array(32).fill(1)) },
+          sendMessage: sendMessage,
+        },
+        {
+          session: 'default',
+          chatId: '123@c.us',
+          keyType: 'PHONE',
+          name: 'Marcelo Privado',
+          key: '+5511999999999',
+        },
+      );
+    } catch (caught) {
+      error = caught;
+    }
+
+    expect(String(error)).toMatch(/failed to send pix/i);
+    expect(String(error)).not.toMatch(/\+5511999999999|Marcelo Privado/);
+  });
 });
