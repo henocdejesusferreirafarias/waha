@@ -88,6 +88,7 @@ import {
   MessageTextRequest,
   MessageVideoRequest,
   MessageVoiceRequest,
+  SendPixRequest,
   SendSeenRequest,
 } from '../../structures/chatting.dto';
 import {
@@ -599,6 +600,11 @@ export abstract class WhatsappSession {
   abstract checkNumberStatus(request: CheckNumberStatusQuery);
 
   abstract sendText(request: MessageTextRequest);
+
+  sendPix(request: SendPixRequest): Promise<WAMessage> {
+    void request;
+    throw new NotImplementedByEngineError();
+  }
 
   sendContactVCard(request: MessageContactVcardRequest) {
     throw new NotImplementedByEngineError();

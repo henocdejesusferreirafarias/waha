@@ -42,6 +42,7 @@ import {
   MessageVideoRequest,
   MessageVoiceRequest,
   NewMessageIDResponse,
+  SendPixRequest,
   SendSeenRequest,
   WANumberExistResult,
 } from '../structures/chatting.dto';
@@ -83,6 +84,15 @@ export class ChattingController {
       request.mentions = await whatsapp.resolveMentionsAll(request.chatId);
     }
     return whatsapp.sendText(request);
+  }
+
+  @Post('/sendPix')
+  @ApiOperation({ summary: 'Send a native PIX key card (WEBJS)' })
+  @UsePipes(new WAHAValidationPipe())
+  @CheckPolicies(CanSession(Action.Send, FromBody('session')))
+  async sendPix(@Body() request: SendPixRequest): Promise<WAMessage> {
+    const whatsapp = await this.manager.getWorkingSession(request.session);
+    return whatsapp.sendPix(request);
   }
 
   @Post('/sendImage')
