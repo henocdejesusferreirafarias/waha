@@ -23,6 +23,7 @@ import {
   TagChatstateToPresence,
   TagPresenceToPresence,
 } from '@waha/core/engines/webjs/presence';
+import { sendPixWebjs } from '@waha/core/engines/webjs/pix.webjs';
 import {
   WebjsChannelMessage,
   WebjsClientCore,
@@ -84,6 +85,7 @@ import {
   MessageStarRequest,
   MessageTextRequest,
   MessageVideoRequest,
+  SendPixRequest,
   SendSeenRequest,
   WANumberExistResult,
 } from '@waha/structures/chatting.dto';
@@ -852,6 +854,18 @@ export class WhatsappSessionWebJSCore extends WhatsappSession {
       request.text,
       options,
     );
+  }
+
+  @Activity()
+  async sendPix(request: SendPixRequest): Promise<WAMessage> {
+    const message = await sendPixWebjs<Message>(
+      {
+        pupPage: this.whatsapp.pupPage,
+        sendMessage: this.whatsapp.sendMessage.bind(this.whatsapp),
+      },
+      request,
+    );
+    return this.toWAMessage(message);
   }
 
   @Activity()
