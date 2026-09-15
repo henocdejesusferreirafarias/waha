@@ -367,7 +367,9 @@ export abstract class WhatsappSession {
     // Media options
     //
     this.media = media;
-    const mimetypes = this.media.events.mimetypes;
+    // Guard against undefined media config (subclasses may omit it during construction;
+    // the granular media control feature assumes media is always provided).
+    const mimetypes = this.media?.events?.mimetypes;
     if (mimetypes && mimetypes.length > 0) {
       const str = mimetypes.join(',');
       const msg = `Only '${str}' mimetypes will be downloaded for the session`;
