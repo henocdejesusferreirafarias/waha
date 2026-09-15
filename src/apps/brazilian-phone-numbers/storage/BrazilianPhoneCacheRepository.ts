@@ -40,7 +40,10 @@ export class BrazilianPhoneCacheRepository {
         app_pk: this.appPk,
         key: key,
       })
-      .where('resolved_at', '>=', this.ttlCutoff())
+      // Normalize the cutoff to ISO-8601 so the comparison matches the on-disk
+      // representation produced by setMany (knex/sqlite3 otherwise coerces one
+      // side to a number and the other to a string, silently breaking the >= check).
+      .where('resolved_at', '>=', this.ttlCutoff().toISOString())
       .first();
     if (!row) {
       return null;
@@ -59,12 +62,15 @@ export class BrazilianPhoneCacheRepository {
     verified: boolean,
     resolvedAt: Date,
   ): Promise<void> {
+    // Persist the timestamp as an ISO-8601 string so reads and TTL comparisons
+    // compare like-for-like values against knex/sqlite3's `datetime` column.
+    const resolvedAtIso = resolvedAt.toISOString();
     const rows = keys.map((key) => ({
       app_pk: this.appPk,
       key: key,
       chat_id: chatId,
       verified: verified,
-      resolved_at: resolvedAt,
+      resolved_at: resolvedAtIso,
     }));
     await this.knex(this.tableName)
       .insert(rows)
@@ -98,7 +104,9 @@ export class BrazilianPhoneCacheRepository {
   async purge(olderThan?: Date): Promise<number> {
     const query = this.knex(this.tableName).where({ app_pk: this.appPk });
     if (olderThan) {
-      query.where('resolved_at', '<', olderThan);
+      // Match the ISO-8601 representation stored by setMany so the comparison
+      // does not silently mix string vs numeric coercion in sqlite3.
+      query.where('resolved_at', '<', olderThan.toISOString());
     }
     return await query.delete();
   }
