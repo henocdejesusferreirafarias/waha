@@ -17,6 +17,7 @@ WORKDIR /git
 COPY package.json .
 COPY yarn.lock .
 COPY .yarnrc.yml .
+COPY .yarn/patches .yarn/patches
 ENV YARN_CHECKSUM_BEHAVIOR=update
 
 RUN npm install -g corepack && corepack enable
@@ -26,7 +27,7 @@ RUN yarn install
 WORKDIR /git
 ADD . /git
 RUN yarn install
-RUN yarn build && find ./dist -name "*.d.ts" -delete
+RUN node --test scripts/tests/webjs-login.test.cjs && yarn build && find ./dist -name "*.d.ts" -delete
 
 # Rebuild sharp from source on x86-64 so it runs on pre-v2 CPUs (no SSE4.2 requirement).
 # The prebuilt @img/sharp-linux-x64 binary requires x86-64-v2; -march=x86-64 limits
