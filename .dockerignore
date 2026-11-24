@@ -17,7 +17,8 @@ examples
 # compiled output
 /dist
 /node_modules
-.yarn
+.yarn/*
+!.yarn/patches/
 
 # Logs
 logs

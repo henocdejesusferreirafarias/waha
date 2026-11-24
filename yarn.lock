@@ -14590,7 +14590,7 @@ __metadata:
     undici: "npm:^7.16.0"
     uniqid: "npm:^5.4.0"
     user-agents: "npm:^1.1.669"
-    whatsapp-web.js: "github:devlikeapro/whatsapp-web.js#fork-main-2026-06-26"
+    whatsapp-web.js: "patch:whatsapp-web.js@https%3A//github.com/devlikeapro/whatsapp-web.js.git%23commit=030a4b800a471dfdee4a82822f87b82a176c5ed8#~/.yarn/patches/whatsapp-web.js-https-c43ca98224.patch"
     write-file-atomic: "npm:^6.0.0"
     yaml: "npm:^2.7.1"
     zod: "npm:^4.3.6"
@@ -14699,7 +14699,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"whatsapp-web.js@github:devlikeapro/whatsapp-web.js#fork-main-2026-06-26":
+"whatsapp-web.js@https://github.com/devlikeapro/whatsapp-web.js.git#commit=030a4b800a471dfdee4a82822f87b82a176c5ed8":
   version: 1.34.7
   resolution: "whatsapp-web.js@https://github.com/devlikeapro/whatsapp-web.js.git#commit=030a4b800a471dfdee4a82822f87b82a176c5ed8"
   dependencies:
@@ -14719,6 +14719,29 @@ __metadata:
     unzipper:
       optional: true
   checksum: 10/074c7dc6baaa34b0a96ee6dec75d576663fdb53ab38e7bf4a278eaeac420bb903e11dbfbbe67b245f30513b936471444accbadbbff456a8e72805196e1e58a92
+  languageName: node
+  linkType: hard
+
+"whatsapp-web.js@patch:whatsapp-web.js@https%3A//github.com/devlikeapro/whatsapp-web.js.git%23commit=030a4b800a471dfdee4a82822f87b82a176c5ed8#~/.yarn/patches/whatsapp-web.js-https-c43ca98224.patch":
+  version: 1.34.7
+  resolution: "whatsapp-web.js@patch:whatsapp-web.js@https%3A//github.com/devlikeapro/whatsapp-web.js.git%23commit=030a4b800a471dfdee4a82822f87b82a176c5ed8#~/.yarn/patches/whatsapp-web.js-https-c43ca98224.patch::version=1.34.7&hash=c27962"
+  dependencies:
+    archiver: "npm:7.0.1"
+    fluent-ffmpeg: "npm:2.1.3"
+    fs-extra: "npm:11.3.4"
+    mime: "npm:3.0.0"
+    node-fetch: "npm:2.7.0"
+    node-webpmux: "npm:3.2.1"
+    puppeteer: "npm:24.38.0"
+    unzipper: "npm:0.12.3"
+  dependenciesMeta:
+    archiver:
+      optional: true
+    fs-extra:
+      optional: true
+    unzipper:
+      optional: true
+  checksum: 10/31a2fa122a71ddc25df78eccb09ef9c799b882954e95f9ba3722cb0a0301883a0db65f8730d70b9d24509d492ceb582eae95bce44ad9e5a1de1804aefc97392b
   languageName: node
   linkType: hard
 

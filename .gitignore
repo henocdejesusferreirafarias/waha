@@ -4,7 +4,8 @@ src/core/engines/gows/proto
 .env
 .envs/*
 *.heapsnapshot
-.yarn
+.yarn/*
+!.yarn/patches/
 example.ts
 .*sessions
 sessions
